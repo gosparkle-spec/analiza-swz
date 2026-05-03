@@ -1,1 +1,852 @@
+<!DOCTYPE html>
+<html lang="pl">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>sparkle · analizator SWZ</title>
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=DM+Mono:wght@400;500&family=Syne:wght@400;500;600&display=swap');
 
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+  :root {
+    --green: #9ef222;
+    --bg: #080808;
+    --bg2: #111111;
+    --bg3: #181818;
+    --border: #222222;
+    --border2: #2e2e2e;
+    --text: #ffffff;
+    --muted: #555555;
+    --muted2: #888888;
+  }
+
+  html, body {
+    background: var(--bg);
+    color: var(--text);
+    font-family: 'Syne', sans-serif;
+    min-height: 100vh;
+    -webkit-font-smoothing: antialiased;
+  }
+
+  /* HEADER */
+  .header {
+    position: sticky;
+    top: 0;
+    z-index: 100;
+    background: rgba(8,8,8,0.92);
+    backdrop-filter: blur(12px);
+    border-bottom: 0.5px solid var(--border);
+    padding: 0 40px;
+    height: 56px;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+  }
+
+  .logo {
+    font-size: 17px;
+    font-weight: 600;
+    letter-spacing: -0.5px;
+    color: var(--text);
+  }
+  .logo em { color: var(--green); font-style: normal; }
+
+  .header-right {
+    display: flex;
+    align-items: center;
+    gap: 16px;
+  }
+
+  .badge {
+    font-family: 'DM Mono', monospace;
+    font-size: 11px;
+    color: var(--green);
+    border: 0.5px solid rgba(158,242,34,0.4);
+    padding: 4px 10px;
+    border-radius: 20px;
+    letter-spacing: 0.3px;
+  }
+
+
+
+  /* MAIN */
+  .btn-new {
+    font-family: 'DM Mono', monospace;
+    font-size: 11px;
+    color: var(--green);
+    background: none;
+    border: 0.5px solid rgba(158,242,34,0.4);
+    padding: 5px 14px;
+    border-radius: 6px;
+    cursor: pointer;
+    transition: all 0.15s;
+  }
+  .btn-new:hover { background: rgba(158,242,34,0.08); }
+
+  .main {
+    max-width: 780px;
+    margin: 0 auto;
+    padding: 60px 40px 80px;
+  }
+
+  .hero {
+    margin-bottom: 48px;
+  }
+
+  .hero-tag {
+    font-family: 'DM Mono', monospace;
+    font-size: 11px;
+    color: var(--green);
+    letter-spacing: 1.5px;
+    text-transform: uppercase;
+    margin-bottom: 16px;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+  }
+  .hero-tag::before {
+    content: '';
+    display: block;
+    width: 20px;
+    height: 1px;
+    background: var(--green);
+  }
+
+  .hero-title {
+    font-size: 38px;
+    font-weight: 600;
+    letter-spacing: -1.5px;
+    line-height: 1.1;
+    margin-bottom: 14px;
+  }
+
+  .hero-sub {
+    font-size: 15px;
+    color: var(--muted2);
+    line-height: 1.65;
+    max-width: 520px;
+    font-weight: 400;
+  }
+
+  /* DROP ZONE */
+  .drop-wrap {
+    position: relative;
+    margin-bottom: 16px;
+  }
+
+  .drop-zone {
+    border: 1px dashed var(--border2);
+    border-radius: 16px;
+    padding: 52px 40px;
+    text-align: center;
+    cursor: pointer;
+    background: var(--bg2);
+    transition: border-color 0.2s, background 0.2s;
+    position: relative;
+    overflow: hidden;
+  }
+
+  .drop-zone::before {
+    content: '';
+    position: absolute;
+    inset: 0;
+    background: radial-gradient(ellipse at 50% 120%, rgba(158,242,34,0.04) 0%, transparent 70%);
+    pointer-events: none;
+  }
+
+  .drop-zone:hover,
+  .drop-zone.drag-over {
+    border-color: rgba(158,242,34,0.5);
+    background: #0d130a;
+  }
+
+  .drop-zone.has-file {
+    border-color: var(--green);
+    border-style: solid;
+    background: #0d130a;
+  }
+
+  .drop-icon-wrap {
+    width: 52px;
+    height: 52px;
+    margin: 0 auto 18px;
+    background: var(--bg3);
+    border: 0.5px solid var(--border2);
+    border-radius: 14px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+  }
+
+  .drop-title {
+    font-size: 15px;
+    font-weight: 500;
+    margin-bottom: 6px;
+  }
+
+  .drop-sub {
+    font-size: 13px;
+    color: var(--muted);
+  }
+  .drop-sub span { color: var(--green); }
+
+  #file-input { display: none; }
+
+  .file-shown {
+    display: none;
+    flex-direction: column;
+    align-items: center;
+    gap: 6px;
+  }
+  .file-shown-name {
+    font-family: 'DM Mono', monospace;
+    font-size: 13px;
+    color: var(--green);
+  }
+  .file-shown-size {
+    font-size: 12px;
+    color: var(--muted);
+  }
+
+  /* BUTTON */
+  .btn-analyze {
+    width: 100%;
+    padding: 15px;
+    background: var(--green);
+    color: #080808;
+    border: none;
+    border-radius: 10px;
+    font-size: 14px;
+    font-weight: 600;
+    font-family: 'Syne', sans-serif;
+    cursor: pointer;
+    transition: opacity 0.2s, transform 0.1s;
+    letter-spacing: -0.2px;
+  }
+  .btn-analyze:hover:not(:disabled) { opacity: 0.88; }
+  .btn-analyze:active:not(:disabled) { transform: scale(0.99); }
+  .btn-analyze:disabled { opacity: 0.3; cursor: not-allowed; }
+
+  .note {
+    margin-top: 12px;
+    text-align: center;
+    font-family: 'DM Mono', monospace;
+    font-size: 11px;
+    color: var(--muted);
+  }
+  .note em { color: var(--green); font-style: normal; }
+
+  /* ERROR */
+  .error-box {
+    display: none;
+    margin-top: 14px;
+    background: rgba(220,50,50,0.08);
+    border: 0.5px solid rgba(220,50,50,0.3);
+    border-radius: 8px;
+    padding: 12px 16px;
+    font-size: 13px;
+    color: #e05555;
+    font-family: 'DM Mono', monospace;
+  }
+
+  /* LOADER */
+  .loader {
+    display: none;
+    padding: 40px 0;
+  }
+
+  .loader-track {
+    width: 100%;
+    height: 1px;
+    background: var(--border);
+    border-radius: 1px;
+    overflow: hidden;
+    margin-bottom: 18px;
+  }
+
+  .loader-fill {
+    height: 100%;
+    background: var(--green);
+    animation: load 2s ease-in-out infinite;
+  }
+
+  @keyframes load {
+    0% { width: 0; margin-left: 0; }
+    50% { width: 60%; margin-left: 20%; }
+    100% { width: 0; margin-left: 100%; }
+  }
+
+  .loader-label {
+    font-family: 'DM Mono', monospace;
+    font-size: 12px;
+    color: var(--muted);
+    text-align: center;
+  }
+
+  /* RESULTS */
+  .results {
+    display: none;
+    margin-top: 48px;
+  }
+
+  .results-top {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    margin-bottom: 24px;
+    padding-bottom: 20px;
+    border-bottom: 0.5px solid var(--border);
+  }
+
+  .results-heading {
+    font-size: 16px;
+    font-weight: 500;
+    letter-spacing: -0.3px;
+  }
+
+  .btn-reset {
+    font-family: 'DM Mono', monospace;
+    font-size: 11px;
+    color: var(--muted);
+    background: none;
+    border: 0.5px solid var(--border2);
+    padding: 6px 12px;
+    border-radius: 6px;
+    cursor: pointer;
+    transition: all 0.15s;
+  }
+  .btn-reset:hover { border-color: var(--muted2); color: var(--muted2); }
+
+  /* TABS */
+  .tabs {
+    display: flex;
+    gap: 2px;
+    background: var(--bg2);
+    border: 0.5px solid var(--border);
+    border-radius: 10px;
+    padding: 3px;
+    margin-bottom: 20px;
+  }
+
+  .tab {
+    flex: 1;
+    padding: 8px 12px;
+    font-size: 13px;
+    font-family: 'Syne', sans-serif;
+    font-weight: 500;
+    cursor: pointer;
+    border-radius: 7px;
+    color: var(--muted);
+    background: none;
+    border: none;
+    transition: background 0.15s, color 0.15s;
+  }
+  .tab.active { background: var(--bg3); color: var(--text); }
+
+  .tab-pane { display: none; }
+  .tab-pane.active { display: block; }
+
+  /* BLOCKS */
+  .block {
+    background: var(--bg2);
+    border: 0.5px solid var(--border);
+    border-radius: 12px;
+    padding: 20px 22px;
+    margin-bottom: 10px;
+  }
+
+  .block-label {
+    font-family: 'DM Mono', monospace;
+    font-size: 10px;
+    color: var(--green);
+    text-transform: uppercase;
+    letter-spacing: 1.5px;
+    margin-bottom: 14px;
+    font-weight: 500;
+  }
+
+  .clist { list-style: none; }
+
+  .citem {
+    display: flex;
+    gap: 10px;
+    padding: 7px 0;
+    border-bottom: 0.5px solid #161616;
+    font-size: 13px;
+    line-height: 1.6;
+    color: #ccc;
+  }
+  .citem:last-child { border-bottom: none; padding-bottom: 0; }
+
+  .cdot {
+    width: 5px;
+    height: 5px;
+    background: var(--green);
+    border-radius: 50%;
+    flex-shrink: 0;
+    margin-top: 8px;
+  }
+
+  .draft-body {
+    font-family: 'DM Mono', monospace;
+    font-size: 12px;
+    color: #aaa;
+    line-height: 1.8;
+    white-space: pre-wrap;
+  }
+
+  .flaga {
+    display: flex;
+    gap: 14px;
+    padding: 12px 0;
+    border-bottom: 0.5px solid #161616;
+    align-items: flex-start;
+  }
+  .flaga:last-child { border-bottom: none; padding-bottom: 0; }
+
+  .flaga-ikona {
+    flex-shrink: 0;
+    width: 28px; height: 28px;
+    border-radius: 7px;
+    display: flex; align-items: center; justify-content: center;
+    font-size: 12px;
+    font-weight: 700;
+    font-family: 'DM Mono', monospace;
+  }
+  .flaga-ikona.wysoki { background: rgba(220,50,50,0.12); color: #e05555; border: 0.5px solid rgba(220,50,50,0.25); }
+  .flaga-ikona.sredni { background: rgba(239,159,39,0.1); color: #e09030; border: 0.5px solid rgba(239,159,39,0.25); }
+  .flaga-ikona.niski { background: rgba(158,242,34,0.06); color: #9ef222; border: 0.5px solid rgba(158,242,34,0.15); }
+
+  .flaga-body { flex: 1; }
+  .flaga-tytul { font-size: 13px; font-weight: 500; color: #fff; margin-bottom: 4px; }
+  .flaga-opis { font-size: 12px; color: #666; line-height: 1.55; }
+
+  .flagi-header {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    margin-bottom: 14px;
+  }
+  .flagi-counter {
+    font-family: 'DM Mono', monospace;
+    font-size: 10px;
+    padding: 2px 8px;
+    border-radius: 10px;
+  }
+  .flagi-counter.red { background: rgba(220,50,50,0.12); color: #e05555; }
+
+  .btn-copy {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    margin-top: 16px;
+    padding: 9px 14px;
+    background: var(--bg3);
+    border: 0.5px solid var(--border2);
+    border-radius: 7px;
+    color: var(--muted2);
+    font-size: 12px;
+    font-family: 'DM Mono', monospace;
+    cursor: pointer;
+    transition: all 0.15s;
+  }
+  .btn-copy:hover { border-color: var(--green); color: var(--green); }
+
+  .kryterium {
+    display: flex;
+    align-items: flex-start;
+    gap: 14px;
+    padding: 10px 0;
+    border-bottom: 0.5px solid #161616;
+  }
+  .kryterium:last-child { border-bottom: none; padding-bottom: 0; }
+
+  .kryterium-waga {
+    flex-shrink: 0;
+    width: 48px;
+    height: 48px;
+    background: #0f150a;
+    border: 1px solid rgba(158,242,34,0.3);
+    border-radius: 10px;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+  }
+  .kryterium-waga-val { font-size: 16px; font-weight: 600; color: var(--green); font-family: 'DM Mono', monospace; line-height: 1; }
+  .kryterium-waga-label { font-size: 9px; color: #555; font-family: 'DM Mono', monospace; }
+
+  .kryterium-body { flex: 1; }
+  .kryterium-nazwa { font-size: 13px; font-weight: 500; color: #fff; margin-bottom: 3px; }
+  .kryterium-opis { font-size: 12px; color: #666; line-height: 1.5; }
+
+  .ocena-uwagi {
+    margin-top: 12px;
+    padding: 10px 12px;
+    background: #0f150a;
+    border: 0.5px solid rgba(158,242,34,0.2);
+    border-radius: 8px;
+    font-size: 12px;
+    color: #666;
+    font-family: 'DM Mono', monospace;
+  }
+</style>
+</head>
+<body>
+
+<header class="header">
+  <div class="logo">sparkle<em>.</em></div>
+  <div class="header-right">
+    <div class="badge">beta · 3 analizy gratis</div>
+    <button class="btn-new" id="btn-new" onclick="resetApp()" style="display:none">↩ nowa analiza</button>
+  </div>
+</header>
+
+<main class="main">
+  <div class="hero">
+    <div class="hero-tag">narzędzie</div>
+    <h1 class="hero-title">analizator SWZ</h1>
+    <p class="hero-sub">wrzuć specyfikację warunków zamówienia — wyciągamy kluczowe warunki i przygotowujemy draft oferty przetargowej.</p>
+  </div>
+
+  <div class="drop-wrap">
+    <div class="drop-zone" id="drop-zone">
+      <div class="drop-icon-wrap">
+        <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#9ef222" stroke-width="1.5">
+          <path d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8z"/>
+          <polyline points="14 2 14 8 20 8"/>
+          <line x1="12" y1="18" x2="12" y2="12"/>
+          <line x1="9" y1="15" x2="15" y2="15"/>
+        </svg>
+      </div>
+      <div id="drop-default">
+        <div class="drop-title">przeciągnij plik SWZ tutaj</div>
+        <div class="drop-sub">lub <span>kliknij żeby wybrać</span> · tylko PDF</div>
+      </div>
+      <div class="file-shown" id="file-shown">
+        <div class="file-shown-name" id="file-name"></div>
+        <div class="file-shown-size" id="file-size"></div>
+      </div>
+      <input type="file" id="file-input" accept=".pdf">
+    </div>
+  </div>
+
+  <div class="error-box" id="error-box"></div>
+
+  <button class="btn-analyze" id="btn-analyze" disabled>wybierz plik SWZ żeby rozpocząć</button>
+  <div class="note">wersja demo · <em>3 z 3</em> bezpłatnych analiz pozostało</div>
+
+  <div class="loader" id="loader">
+    <div class="loader-track"><div class="loader-fill"></div></div>
+    <div class="loader-label" id="loader-label">czytam specyfikację...</div>
+  </div>
+
+  <div class="results" id="results">
+    <div class="results-top">
+      <div class="results-heading">wyniki analizy</div>
+      <button class="btn-reset" id="btn-reset">↩ nowa analiza</button>
+    </div>
+
+    <div class="tabs">
+      <button class="tab active" data-tab="flagi">uwaga · sprawdź</button>
+      <button class="tab" data-tab="conditions">warunki zamówienia</button>
+      <button class="tab" data-tab="draft">draft oferty</button>
+    </div>
+
+    <div class="tab-pane active" id="pane-flagi">
+      <div class="block" id="block-flagi">
+        <div class="flagi-header">
+          <div class="block-label" style="margin-bottom:0">flagi ryzyka</div>
+          <div class="flagi-counter red" id="flagi-counter"></div>
+        </div>
+        <div id="flagi-content"></div>
+      </div>
+    </div>
+
+    <div class="tab-pane" id="pane-conditions">
+      <div class="block">
+        <div class="block-label">przedmiot zamówienia</div>
+        <ul class="clist" id="list-subject"></ul>
+      </div>
+      <div class="block">
+        <div class="block-label">wymagania wobec wykonawcy</div>
+        <ul class="clist" id="list-requirements"></ul>
+      </div>
+      <div class="block">
+        <div class="block-label">terminy i warunki finansowe</div>
+        <ul class="clist" id="list-deadlines"></ul>
+      </div>
+      <div class="block">
+        <div class="block-label">wymagane dokumenty</div>
+        <ul class="clist" id="list-docs"></ul>
+      </div>
+      <div class="block" id="block-wadium">
+        <div class="block-label">wadium</div>
+        <ul class="clist" id="wadium-content"></ul>
+      </div>
+      <div class="block" id="block-ocena">
+        <div class="block-label">kryteria oceny ofert</div>
+        <div id="ocena-content"></div>
+      </div>
+    </div>
+
+    <div class="tab-pane" id="pane-draft">
+      <div class="block">
+        <div class="block-label">draft oferty przetargowej</div>
+        <div id="draft-placeholder" style="padding:12px 0">
+          <button class="btn-analyze" id="btn-gen-draft" style="max-width:280px;padding:11px 20px;font-size:13px">generuj draft oferty</button>
+          <p style="font-size:12px;color:#555;margin-top:10px;font-family:'DM Mono',monospace">draft generowany osobno — zajmuje ~15 sekund</p>
+        </div>
+        <div class="draft-body" id="draft-body" style="display:none"></div>
+      </div>
+      <button class="btn-copy" id="btn-copy" style="display:none">
+        <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5">
+          <rect x="9" y="9" width="13" height="13" rx="2"/>
+          <path d="M5 15H4a2 2 0 01-2-2V4a2 2 0 012-2h9a2 2 0 012 2v1"/>
+        </svg>
+        kopiuj do schowka
+      </button>
+    </div>
+  </div>
+</main>
+
+<script>
+  let pdfBase64 = null;
+  let selectedFile = null;
+
+  function showNote(msg) {
+    const note = document.querySelector('.note');
+    const orig = note.innerHTML;
+    note.innerHTML = '<em>' + msg + '</em>';
+    setTimeout(() => { note.innerHTML = orig; }, 2000);
+  }
+
+  const dropZone = document.getElementById('drop-zone');
+  const fileInput = document.getElementById('file-input');
+
+  dropZone.addEventListener('click', () => fileInput.click());
+  dropZone.addEventListener('dragover', e => { e.preventDefault(); dropZone.classList.add('drag-over'); });
+  dropZone.addEventListener('dragleave', () => dropZone.classList.remove('drag-over'));
+  dropZone.addEventListener('drop', e => {
+    e.preventDefault();
+    dropZone.classList.remove('drag-over');
+    if (e.dataTransfer.files[0]) handleFile(e.dataTransfer.files[0]);
+  });
+  fileInput.addEventListener('change', () => {
+    if (fileInput.files[0]) handleFile(fileInput.files[0]);
+  });
+
+  function handleFile(file) {
+    if (!file.name.toLowerCase().endsWith('.pdf')) {
+      showError('prześlij plik w formacie PDF'); return;
+    }
+    hideError();
+    selectedFile = file;
+    document.getElementById('file-name').textContent = file.name;
+    document.getElementById('file-size').textContent = (file.size / 1024).toFixed(0) + ' KB';
+    document.getElementById('drop-default').style.display = 'none';
+    document.getElementById('file-shown').style.display = 'flex';
+    dropZone.classList.add('has-file');
+    const btn = document.getElementById('btn-analyze');
+    btn.disabled = false;
+    btn.textContent = 'analizuj SWZ';
+    const reader = new FileReader();
+    reader.onload = e => { pdfBase64 = e.target.result.split(',')[1]; };
+    reader.readAsDataURL(file);
+  }
+
+  document.getElementById('btn-analyze').addEventListener('click', async () => {
+    if (!pdfBase64) return;
+    await runAnalysis();
+  });
+
+  async function runAnalysis() {
+    const btn = document.getElementById('btn-analyze');
+    btn.disabled = true;
+    document.getElementById('loader').style.display = 'block';
+    document.getElementById('results').style.display = 'none';
+    hideError();
+
+    const labels = ['czytam specyfikację...', 'wyciągam warunki zamówienia...', 'przygotowuję draft oferty...'];
+    let li = 0;
+    const lt = setInterval(() => { li = Math.min(li+1, labels.length-1); document.getElementById('loader-label').textContent = labels[li]; }, 2500);
+
+    try {
+      const response = await fetch('/api/analyze', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ pdfBase64 })
+      });
+
+      clearInterval(lt);
+
+      if (!response.ok) {
+        const err = await response.json();
+        throw new Error(err.error || 'błąd serwera (' + response.status + ')');
+      }
+
+      const parsed = await response.json();
+
+      document.getElementById('loader').style.display = 'none';
+      renderResults(parsed);
+
+    } catch (err) {
+      clearInterval(lt);
+      document.getElementById('loader').style.display = 'none';
+      btn.disabled = false;
+      btn.textContent = 'analizuj SWZ';
+      showError('błąd: ' + err.message);
+    }
+  }
+
+  function renderResults(data) {
+    renderFlagi(data.flagi);
+    renderList('list-subject', data.subject || []);
+    renderList('list-requirements', data.requirements || []);
+    renderList('list-deadlines', data.deadlines || []);
+    renderList('list-docs', data.docs || []);
+    renderWadium(data.wadium);
+    renderOcena(data.ocena);
+    document.getElementById('draft-body').textContent = data.draft || '';
+    document.getElementById('results').style.display = 'block';
+    document.getElementById('btn-new').style.display = 'block';
+    document.getElementById('results').scrollIntoView({ behavior: 'smooth' });
+  }
+
+  function renderFlagi(flagi) {
+    const el = document.getElementById('flagi-content');
+    const counter = document.getElementById('flagi-counter');
+    if (!flagi || flagi.length === 0) {
+      el.innerHTML = `<p style="font-size:12px;color:#555;padding:8px 0">nie wykryto flag ryzyka</p>`;
+      counter.textContent = '0';
+      return;
+    }
+    const wysokie = flagi.filter(f => f.poziom === 'wysoki').length;
+    counter.textContent = wysokie > 0 ? `${wysokie} wysokie ryzyko` : `${flagi.length} flag`;
+    const kolejnosc = { 'wysoki': 0, 'sredni': 1, 'niski': 2 };
+    const sorted = [...flagi].sort((a, b) => (kolejnosc[a.poziom] || 2) - (kolejnosc[b.poziom] || 2));
+    el.innerHTML = sorted.map(f => {
+      const ikona = f.poziom === 'wysoki' ? '!' : f.poziom === 'sredni' ? '~' : 'i';
+      return `
+        <div class="flaga">
+          <div class="flaga-ikona ${f.poziom}">${ikona}</div>
+          <div class="flaga-body">
+            <div class="flaga-tytul">${f.tytul}</div>
+            <div class="flaga-opis">${f.opis}</div>
+          </div>
+        </div>`;
+    }).join('');
+  }
+
+  function renderWadium(w) {
+    const el = document.getElementById('wadium-content');
+    if (!w || !w.wymagane) {
+      el.innerHTML = `<li class="citem"><div class="cdot" style="background:#555"></div><span style="color:#666">zamawiający nie wymaga wniesienia wadium w tym postępowaniu</span></li>`;
+      return;
+    }
+    const rows = [];
+    if (w.kwota) rows.push(`kwota: <strong>${w.kwota}</strong>`);
+    if (w.forma) rows.push(`forma: ${w.forma}`);
+    if (w.termin) rows.push(`termin wniesienia: ${w.termin}`);
+    if (w.uwagi) rows.push(w.uwagi);
+    el.innerHTML = rows.map(r => `<li class="citem"><div class="cdot"></div><span>${r}</span></li>`).join('');
+  }
+
+  function renderOcena(o) {
+    const el = document.getElementById('ocena-content');
+    if (!o || !o.kryteria || o.kryteria.length === 0) {
+      el.innerHTML = `<p style="font-size:12px;color:#555">brak danych o kryteriach oceny</p>`;
+      return;
+    }
+    const kryteria = o.kryteria.map(k => `
+      <div class="kryterium">
+        <div class="kryterium-waga">
+          <div class="kryterium-waga-val">${k.waga}</div>
+          <div class="kryterium-waga-label">pkt</div>
+        </div>
+        <div class="kryterium-body">
+          <div class="kryterium-nazwa">${k.nazwa}</div>
+          <div class="kryterium-opis">${k.opis || ''}</div>
+        </div>
+      </div>
+    `).join('');
+    const uwagi = o.uwagi ? `<div class="ocena-uwagi">${o.uwagi}</div>` : '';
+    el.innerHTML = kryteria + uwagi;
+  }
+
+  function renderList(id, items) {
+    document.getElementById(id).innerHTML = items.map(i =>
+      `<li class="citem"><div class="cdot"></div><span>${i}</span></li>`
+    ).join('');
+  }
+
+  function resetApp() {
+    pdfBase64 = null; selectedFile = null; fileInput.value = '';
+    document.getElementById('drop-default').style.display = 'block';
+    document.getElementById('file-shown').style.display = 'none';
+    dropZone.classList.remove('has-file');
+    const btnA = document.getElementById('btn-analyze');
+    btnA.disabled = true;
+    btnA.textContent = 'wybierz plik SWZ żeby rozpocząć';
+    document.getElementById('results').style.display = 'none';
+    document.getElementById('btn-new').style.display = 'none';
+    document.getElementById('loader').style.display = 'none';
+    hideError();
+    window.scrollTo({ top: 0, behavior: 'smooth' });
+  }
+
+  document.getElementById('btn-reset').addEventListener('click', resetApp);
+
+  document.getElementById('btn-gen-draft').addEventListener('click', async () => {
+    if (!pdfBase64) return;
+    const btn = document.getElementById('btn-gen-draft');
+    btn.disabled = true;
+    btn.textContent = 'generuję draft...';
+    try {
+      const response = await fetch('/api/draft', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ pdfBase64 })
+      });
+      const data = await response.json();
+      if (!response.ok) throw new Error(data.error || 'błąd serwera');
+      document.getElementById('draft-placeholder').style.display = 'none';
+      document.getElementById('draft-body').style.display = 'block';
+      document.getElementById('draft-body').textContent = data.draft;
+      document.getElementById('btn-copy').style.display = 'flex';
+    } catch (err) {
+      btn.disabled = false;
+      btn.textContent = 'generuj draft oferty';
+      showError('błąd generowania draftu: ' + err.message);
+    }
+  });
+
+  document.getElementById('btn-copy').addEventListener('click', () => {
+    const text = document.getElementById('draft-body').textContent;
+    navigator.clipboard.writeText(text).then(() => {
+      const btn = document.getElementById('btn-copy');
+      btn.textContent = 'skopiowano!';
+      setTimeout(() => { btn.innerHTML = `<svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><rect x="9" y="9" width="13" height="13" rx="2"/><path d="M5 15H4a2 2 0 01-2-2V4a2 2 0 012-2h9a2 2 0 012 2v1"/></svg> kopiuj do schowka`; }, 2000);
+    });
+  });
+
+  document.querySelectorAll('.tab').forEach(tab => {
+    tab.addEventListener('click', () => {
+      document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
+      document.querySelectorAll('.tab-pane').forEach(p => p.classList.remove('active'));
+      tab.classList.add('active');
+      document.getElementById('pane-' + tab.dataset.tab).classList.add('active');
+    });
+  });
+
+  function showError(msg) {
+    const box = document.getElementById('error-box');
+    box.textContent = msg; box.style.display = 'block';
+  }
+  function hideError() {
+    document.getElementById('error-box').style.display = 'none';
+  }
+</script>
+</body>
+</html>
