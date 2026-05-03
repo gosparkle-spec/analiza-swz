@@ -27,7 +27,7 @@ app.post('/api/analyze', async (req, res) => {
         'anthropic-version': '2023-06-01'
       },
       body: JSON.stringify({
-        model: 'claude-sonnet-4-20250514',
+        model: 'claude-sonnet-4-5',
         max_tokens: 4000,
         system: `Jesteś ekspertem ds. zamówień publicznych w Polsce. Analizujesz SWZ i wyciągasz kluczowe informacje. Odpowiedz TYLKO w JSON bez markdown:
 {"subject":["..."],"requirements":["..."],"deadlines":["..."],"docs":["..."],"wadium":{"wymagane":true,"kwota":"np. 5 000 PLN lub null","forma":"np. pieniądz, gwarancja bankowa lub null","termin":"termin wniesienia lub null","uwagi":"dodatkowe informacje lub null"},"ocena":{"kryteria":[{"nazwa":"np. Cena","waga":60,"opis":"opis zasad oceny tego kryterium"}],"max_punktow":100,"uwagi":"dodatkowe uwagi lub null"},"flagi":[{"poziom":"wysoki/sredni/niski","tytul":"krótki tytuł flagi","opis":"dokładny opis ryzyka z cytatem lub odniesieniem do rozdziału SWZ"}],"draft":"..."}
