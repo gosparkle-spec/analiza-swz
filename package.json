@@ -1,1 +1,15 @@
-{ "name": "swz-analyzer", "version": "1.0.0", "scripts": { "start": "npx serve . -p $PORT" }, "dependencies": { "serve": "^14.0.0" } }
+{
+  "name": "swz-analyzer",
+  "version": "1.0.0",
+  "description": "sparkle · analizator SWZ",
+  "main": "server.js",
+  "scripts": {
+    "start": "node server.js"
+  },
+  "dependencies": {
+    "express": "^4.18.2"
+  },
+  "engines": {
+    "node": ">=18.0.0"
+  }
+}
