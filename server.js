@@ -54,11 +54,16 @@ app.post('/api/analyze', async (req, res) => {
     const data = await response.json();
     const raw = data.content.filter(b => b.type === 'text').map(b => b.text).join('');
 
+    // loguj pierwszych 500 znaków żeby zobaczyć co Claude zwrócił
+    console.log('RAW RESPONSE (first 500):', raw.substring(0, 500));
+    console.log('STOP REASON:', data.stop_reason);
+
     // wyciągnij JSON z odpowiedzi — szukaj pierwszego { i ostatniego }
     const firstBrace = raw.indexOf('{');
     const lastBrace = raw.lastIndexOf('}');
 
     if (firstBrace === -1 || lastBrace === -1) {
+      console.log('NO JSON FOUND in response');
       return res.status(500).json({ error: 'AI nie zwróciło poprawnej odpowiedzi. Spróbuj ponownie.' });
     }
 
@@ -67,7 +72,9 @@ app.post('/api/analyze', async (req, res) => {
     try {
       const parsed = JSON.parse(jsonStr);
       res.json(parsed);
-    } catch {
+    } catch (parseErr) {
+      console.log('PARSE ERROR:', parseErr.message);
+      console.log('JSON STRING (last 200):', jsonStr.substring(jsonStr.length - 200));
       return res.status(500).json({ error: 'Błąd parsowania odpowiedzi AI. Spróbuj ponownie.' });
     }
   } catch (err) {
