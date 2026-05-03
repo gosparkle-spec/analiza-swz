@@ -53,19 +53,22 @@ app.post('/api/analyze', async (req, res) => {
 
     const data = await response.json();
     const raw = data.content.filter(b => b.type === 'text').map(b => b.text).join('');
-    const clean = raw.replace(/```json|```/g, '').trim();
+
+    // wyciągnij JSON z odpowiedzi — szukaj pierwszego { i ostatniego }
+    const firstBrace = raw.indexOf('{');
+    const lastBrace = raw.lastIndexOf('}');
+
+    if (firstBrace === -1 || lastBrace === -1) {
+      return res.status(500).json({ error: 'AI nie zwróciło poprawnej odpowiedzi. Spróbuj ponownie.' });
+    }
+
+    const jsonStr = raw.substring(firstBrace, lastBrace + 1);
 
     try {
-      const parsed = JSON.parse(clean);
+      const parsed = JSON.parse(jsonStr);
       res.json(parsed);
     } catch {
-      const lastBrace = clean.lastIndexOf('}');
-      try {
-        const parsed = JSON.parse(clean.substring(0, lastBrace + 1));
-        res.json(parsed);
-      } catch {
-        res.status(500).json({ error: 'Błąd parsowania odpowiedzi AI. Spróbuj ponownie.' });
-      }
+      return res.status(500).json({ error: 'Błąd parsowania odpowiedzi AI. Spróbuj ponownie.' });
     }
   } catch (err) {
     res.status(500).json({ error: err.message });
